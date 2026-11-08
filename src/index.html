@@ -1,0 +1,1823 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Analýza provozu recepce SVJ (2026) – Srovnání 4 variant</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --surface: #ffffff;
+      --surface-alt: #f8fafc;
+      --text: #0f172a;
+      --text-muted: #475569;
+      --border: #e2e8f0;
+      --primary: #2563eb;
+      --primary-light: #eff6ff;
+      --success: #16a34a;
+      --success-light: #f0fdf4;
+      --warning: #d97706;
+      --warning-light: #fffbeb;
+      --danger: #dc2626;
+      --danger-light: #fef2f2;
+      --purple: #7c3aed;
+      --purple-light: #f5f3ff;
+      --shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.07), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
+      --radius: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 24px;
+    }
+
+    .container {
+      max-width: 1380px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      color: #ffffff;
+      padding: 28px 32px;
+      border-radius: var(--radius);
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .header h1 {
+      font-size: 1.65rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .header p {
+      color: #cbd5e1;
+      font-size: 0.95rem;
+      max-width: 780px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn {
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 600;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.22);
+    }
+
+    /* Control Bar */
+    .controls-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      align-items: end;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .control-group label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+    }
+
+    .control-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    input[type="number"], select {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      background: var(--surface-alt);
+    }
+
+    .segmented-control {
+      display: flex;
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 3px;
+    }
+
+    .segmented-control button {
+      flex: 1;
+      border: none;
+      background: transparent;
+      padding: 7px 10px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .segmented-control button.active {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3);
+    }
+
+    /* KPI Cards */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(295px, 1fr));
+      gap: 20px;
+      margin-bottom: 28px;
+    }
+
+    .variant-card {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      box-shadow: var(--shadow);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+
+    .variant-card:hover {
+      transform: translateY(-2px);
+    }
+
+    .variant-card.baseline {
+      border-top: 5px solid var(--danger);
+    }
+
+    .variant-card.agency-day {
+      border-top: 5px solid var(--warning);
+    }
+
+    .variant-card.inhouse-24 {
+      border-top: 5px solid var(--primary);
+    }
+
+    .variant-card.recommended {
+      border: 2px solid var(--success);
+      border-top: 5px solid var(--success);
+      background: linear-gradient(to bottom, #ffffff 0%, #f8fef9 100%);
+    }
+
+    .badge-top {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 4px 10px;
+      border-radius: 999px;
+      margin-bottom: 10px;
+      width: fit-content;
+    }
+
+    .badge-danger { background: var(--danger-light); color: var(--danger); }
+    .badge-warning { background: var(--warning-light); color: var(--warning); }
+    .badge-primary { background: var(--primary-light); color: var(--primary); }
+    .badge-success { background: var(--success-light); color: var(--success); }
+
+    .variant-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .variant-subtitle {
+      font-size: 0.84rem;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    .price-main {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1.15;
+    }
+
+    .price-sub {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+      margin-bottom: 14px;
+    }
+
+    .savings-pill {
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .meta-list {
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      font-size: 0.84rem;
+    }
+
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .meta-row span:first-child {
+      color: var(--text-muted);
+    }
+
+    .meta-row span:last-child {
+      font-weight: 600;
+    }
+
+    /* Section Containers */
+    .section-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 28px;
+      margin-bottom: 28px;
+      box-shadow: var(--shadow);
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 14px;
+    }
+
+    .section-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .section-desc {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+    }
+
+    /* Visual Chart Bars */
+    .chart-container {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      margin-top: 10px;
+    }
+
+    .chart-row {
+      display: grid;
+      grid-template-columns: 240px 1fr 140px;
+      align-items: center;
+      gap: 16px;
+    }
+
+    @media (max-width: 768px) {
+      .chart-row {
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
+    }
+
+    .chart-label {
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .chart-label small {
+      display: block;
+      font-weight: 400;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+    }
+
+    .bar-track {
+      width: 100%;
+      height: 34px;
+      background: var(--surface-alt);
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      border: 1px solid var(--border);
+    }
+
+    .bar-seg {
+      height: 100%;
+      transition: width 0.4s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 700;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .seg-base { background: #3b82f6; }
+    .seg-bonuses { background: #0ea5e9; }
+    .seg-tax { background: #6366f1; }
+    .seg-admin { background: #10b981; }
+    .seg-vat { background: #ef4444; }
+
+    .chart-total {
+      text-align: right;
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px dashed var(--border);
+      font-size: 0.82rem;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+    }
+
+    /* Detailed Table */
+    .table-responsive {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+
+    th, td {
+      padding: 11px 14px;
+      text-align: right;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th:first-child, td:first-child {
+      text-align: left;
+    }
+
+    thead th {
+      background: var(--surface-alt);
+      font-weight: 700;
+      color: var(--text);
+      border-top: 1px solid var(--border);
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+    }
+
+    .col-highlight {
+      background-color: rgba(22, 163, 74, 0.05);
+    }
+
+    tr.category-row td {
+      background: #f1f5f9;
+      font-weight: 700;
+      color: #334155;
+      text-transform: uppercase;
+      font-size: 0.76rem;
+      letter-spacing: 0.04em;
+      padding-top: 10px;
+      padding-bottom: 10px;
+    }
+
+    tr.subtotal-row td {
+      font-weight: 700;
+      background: #f8fafc;
+      border-top: 1px solid #cbd5e1;
+      border-bottom: 1px solid #cbd5e1;
+    }
+
+    tr.grandtotal-row td {
+      font-weight: 800;
+      font-size: 1rem;
+      background: #eef2ff;
+      border-top: 2px solid #94a3b8;
+      border-bottom: 2px solid #94a3b8;
+    }
+
+    .note-inline {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    /* Obligations Matrix & Tabs */
+    .tabs-nav {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .tab-btn {
+      padding: 10px 18px;
+      border: 1px solid var(--border);
+      background: var(--surface-alt);
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      transition: all 0.15s;
+    }
+
+    .tab-btn.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    .obligations-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+      gap: 20px;
+    }
+
+    .ob-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px;
+      background: var(--surface-alt);
+    }
+
+    .ob-card h4 {
+      font-size: 0.98rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .ob-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      font-size: 0.85rem;
+    }
+
+    .ob-list li {
+      position: relative;
+      padding-left: 22px;
+    }
+
+    .ob-list li::before {
+      content: "•";
+      position: absolute;
+      left: 4px;
+      font-weight: bold;
+      font-size: 1.1rem;
+      line-height: 1;
+    }
+
+    .ob-list.danger-list li::before { color: var(--danger); content: "⚠️"; font-size: 0.85rem; left: 0; }
+    .ob-list.check-list li::before { color: var(--success); content: "✓"; font-size: 0.95rem; left: 2px; }
+    .ob-list.neutral-list li::before { color: var(--primary); content: "→"; font-size: 0.9rem; left: 2px; }
+
+    /* Elimination Comparison Box */
+    .diff-box {
+      margin-top: 22px;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 10px;
+      padding: 18px 22px;
+    }
+
+    .diff-box h4 {
+      color: #166534;
+      margin-bottom: 10px;
+      font-size: 1rem;
+    }
+
+    .diff-columns {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+      font-size: 0.85rem;
+    }
+
+    .diff-item {
+      background: #ffffff;
+      padding: 12px 14px;
+      border-radius: 8px;
+      border: 1px solid #dcfce7;
+    }
+
+    .diff-item strong {
+      display: block;
+      color: #15803d;
+      margin-bottom: 3px;
+    }
+
+    @media print {
+      body { background: #fff; padding: 0; }
+      .header { background: #000 !important; color: #000 !important; border: 1px solid #000; }
+      .header p { color: #333 !important; }
+      .btn { display: none; }
+      .section-card, .variant-card, .controls-panel { box-shadow: none; break-inside: avoid; }
+    }
+
+    :root {
+      color-scheme: light;
+      --bg: #f5f7f6;
+      --surface: #ffffff;
+      --surface-alt: #f9fbfa;
+      --text: #182421;
+      --text-muted: #71807c;
+      --border: #e8edeb;
+      --primary: #287567;
+      --primary-light: #e8f3f0;
+      --success: #4b8468;
+      --success-light: #edf5f0;
+      --warning: #b8793e;
+      --warning-light: #fbf2e9;
+      --danger: #b85e5e;
+      --danger-light: #fbefef;
+      --purple: #737e9c;
+      --purple-light: #eff2f8;
+      --shadow: 0 8px 28px rgba(28, 47, 41, 0.045);
+      --radius: 11px;
+      font-family: "DM Sans", "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    body {
+      min-width: 320px;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "DM Sans", "Segoe UI", sans-serif;
+    }
+
+    button, input, select {
+      font: inherit;
+    }
+
+    button, input, select {
+      color: inherit;
+    }
+
+    button:focus-visible, input:focus-visible, select:focus-visible {
+      outline: 3px solid rgba(40, 117, 103, 0.28);
+      outline-offset: 2px;
+    }
+
+    .container {
+      max-width: 1520px;
+      padding: 31px 36px 22px;
+    }
+
+    .header {
+      align-items: flex-end;
+      padding: 0 0 22px;
+      border-bottom: 1px solid var(--border);
+      border-radius: 0;
+      margin-bottom: 20px;
+      background: transparent;
+      color: var(--text);
+      box-shadow: none;
+    }
+
+    .header h1 {
+      margin-bottom: 6px;
+      font-family: "Manrope", "DM Sans", "Segoe UI", sans-serif;
+      font-size: clamp(26px, 2.5vw, 34px);
+      font-weight: 700;
+      letter-spacing: -1.1px;
+      line-height: 1.2;
+    }
+
+    .header p {
+      max-width: 900px;
+      color: var(--text-muted);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .header-actions {
+      flex: none;
+    }
+
+    .btn {
+      min-height: 36px;
+      padding: 0 12px;
+      border: 1px solid #e2e9e6;
+      border-radius: 7px;
+      background: #fff;
+      color: #55645f;
+      font-size: 12px;
+      font-weight: 600;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+    }
+
+    .btn:hover {
+      border-color: #bdd3cc;
+      background: #f7faf9;
+      color: var(--primary);
+    }
+
+    .controls-panel,
+    .variant-card,
+    .section-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .controls-panel {
+      padding: 18px;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .control-group label {
+      color: var(--text-muted);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+    }
+
+    input[type="number"], select {
+      min-height: 37px;
+      border-color: #e8edeb;
+      border-radius: 7px;
+      background: #f9fbfa;
+      color: #45534e;
+      font-size: 13px;
+    }
+
+    .segmented-control {
+      min-height: 37px;
+      border-color: #e8edeb;
+      border-radius: 7px;
+      background: #f9fbfa;
+    }
+
+    .segmented-control button {
+      border-radius: 5px;
+      font-size: 12px;
+    }
+
+    .segmented-control button.active,
+    .tab-btn.active {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: none;
+    }
+
+    .cards-grid {
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+      gap: 13px;
+      margin-bottom: 18px;
+    }
+
+    .variant-card {
+      padding: 18px;
+      border-top-width: 3px;
+      box-shadow: var(--shadow);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .variant-card:hover {
+      transform: none;
+      box-shadow: 0 10px 28px rgba(28, 47, 41, 0.075);
+    }
+
+    .variant-card.baseline { border-top-color: var(--danger); }
+    .variant-card.agency-day { border-top-color: var(--warning); }
+    .variant-card.inhouse-24 { border-top-color: #7785a3; }
+    .variant-card.recommended {
+      border: 1px solid #a8c9c0;
+      border-top: 3px solid var(--primary);
+      background: #fff;
+    }
+
+    .badge-top {
+      padding: 4px 8px;
+      font-size: 10px;
+      letter-spacing: 0.04em;
+    }
+
+    .badge-danger { background: var(--danger-light); color: var(--danger); }
+    .badge-warning { background: var(--warning-light); color: var(--warning); }
+    .badge-primary { background: var(--primary-light); color: var(--primary); }
+    .badge-success { background: var(--success-light); color: var(--success); }
+
+    .variant-title {
+      font-family: "Manrope", "DM Sans", "Segoe UI", sans-serif;
+      font-size: 1.05rem;
+      letter-spacing: -0.25px;
+    }
+
+    .price-main {
+      font-family: "Manrope", "DM Sans", "Segoe UI", sans-serif;
+      font-size: 1.55rem;
+      letter-spacing: -0.6px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .meta-list {
+      border-color: #edf1ef;
+      font-size: 0.78rem;
+    }
+
+    .meta-row {
+      gap: 12px;
+    }
+
+    .meta-row span:last-child {
+      text-align: right;
+    }
+
+    .section-card {
+      padding: 0;
+      margin-bottom: 15px;
+      overflow: hidden;
+    }
+
+    .section-header {
+      align-items: flex-start;
+      padding: 16px 18px 12px;
+      margin: 0;
+      border-bottom: 1px solid #f0f3f2;
+    }
+
+    .section-title {
+      font-family: "Manrope", "DM Sans", "Segoe UI", sans-serif;
+      font-size: 15px;
+      letter-spacing: -0.25px;
+    }
+
+    .section-desc {
+      margin: 4px 0 0;
+      color: #94a09c;
+      font-size: 11px;
+      line-height: 1.6;
+    }
+
+    .chart-container,
+    .legend,
+    .tabs-nav,
+    .obligations-grid,
+    .diff-box {
+      margin-right: 18px;
+      margin-left: 18px;
+    }
+
+    .chart-container {
+      margin-top: 16px;
+    }
+
+    .chart-row {
+      grid-template-columns: minmax(180px, 240px) minmax(120px, 1fr) minmax(95px, 140px);
+      gap: 12px;
+    }
+
+    .bar-track {
+      border-color: #e8edeb;
+      border-radius: 7px;
+      background: #f6f9f7;
+    }
+
+    .seg-base { background: #287567; }
+    .seg-bonuses { background: #70a99a; }
+    .seg-tax { background: #8d9bb5; }
+    .seg-admin { background: #a4b8aa; }
+    .seg-vat { background: #d88968; }
+
+    .chart-total {
+      font-variant-numeric: tabular-nums;
+    }
+
+    .legend {
+      gap: 12px;
+      margin-top: 15px;
+      margin-bottom: 16px;
+      padding-top: 12px;
+      border-top-color: #edf1ef;
+      color: #7d8985;
+      font-size: 11px;
+    }
+
+    .legend-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 3px;
+    }
+
+    .table-responsive {
+      margin: 0 18px 18px;
+    }
+
+    table {
+      min-width: 860px;
+      font-size: 12px;
+    }
+
+    th, td {
+      padding: 10px 12px;
+      border-bottom-color: #f0f3f2;
+    }
+
+    thead th {
+      border-top-color: #edf1ef;
+      border-bottom: 1px solid #e8edeb;
+      background: #f9fbfa;
+      color: #75827d;
+      font-size: 10px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .col-highlight {
+      background-color: #f0f6f3;
+    }
+
+    tr.category-row td {
+      background: #f5f8f6;
+      color: #66746e;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+    }
+
+    tr.subtotal-row td {
+      border-top-color: #e2e9e6;
+      border-bottom-color: #e2e9e6;
+      background: #fafcfb;
+    }
+
+    tr.grandtotal-row td {
+      border-color: #d8e6e1;
+      background: #e8f3f0;
+      color: #284a40;
+    }
+
+    .note-inline {
+      color: #94a09c;
+      font-size: 10px;
+    }
+
+    .tabs-nav {
+      gap: 7px;
+      margin-top: 15px;
+      margin-bottom: 15px;
+    }
+
+    .tab-btn {
+      padding: 8px 11px;
+      border-color: #e2e9e6;
+      border-radius: 7px;
+      background: #fff;
+      font-size: 11px;
+    }
+
+    .tab-btn:not(.active):hover {
+      border-color: #bdd3cc;
+      color: var(--primary);
+    }
+
+    .obligations-grid {
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .ob-card {
+      border-color: #e8edeb;
+      border-radius: 9px;
+      background: #fbfcfb;
+    }
+
+    .ob-card h4 {
+      font-family: "Manrope", "DM Sans", "Segoe UI", sans-serif;
+      font-size: 13px;
+    }
+
+    .ob-list {
+      color: #53615c;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .diff-box {
+      margin-top: 0;
+      margin-bottom: 18px;
+      border-color: #d8e9df;
+      border-radius: 9px;
+      background: #f2f7f3;
+    }
+
+    .diff-box h4 {
+      color: #3e7257;
+    }
+
+    .diff-item {
+      border-color: #e5eee7;
+    }
+
+    .diff-item strong {
+      color: #4b8468;
+    }
+
+    @media (max-width: 1080px) {
+      .container {
+        padding-right: 24px;
+        padding-left: 24px;
+      }
+
+      .cards-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 800px) {
+      .container {
+        padding: 24px 18px 18px;
+      }
+
+      .header {
+        align-items: flex-start;
+      }
+
+      .controls-panel {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 560px) {
+      .container {
+        padding: 22px 12px 16px;
+      }
+
+      .header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        padding-bottom: 16px;
+      }
+
+      .header h1 {
+        font-size: 25px;
+      }
+
+      .header-actions {
+        align-self: flex-start;
+      }
+
+      .controls-panel,
+      .cards-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .controls-panel {
+        padding: 14px;
+        gap: 13px;
+      }
+
+      .section-header {
+        padding: 13px 12px 10px;
+      }
+
+      .chart-container,
+      .legend,
+      .tabs-nav,
+      .obligations-grid,
+      .diff-box {
+        margin-right: 12px;
+        margin-left: 12px;
+      }
+
+      .chart-row {
+        grid-template-columns: 1fr;
+        gap: 5px;
+      }
+
+      .chart-total {
+        text-align: left;
+      }
+
+      .table-responsive {
+        margin-right: 12px;
+        margin-left: 12px;
+      }
+
+      .obligations-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media print {
+      body { background: #fff; }
+      .container { max-width: none; padding: 0; }
+      .header { background: #fff !important; color: #000 !important; }
+      .header p { color: #333 !important; }
+      .section-card, .variant-card, .controls-panel { border-color: #ccc; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- HEADER -->
+  <header class="header">
+    <div>
+      <h1>Ekonomická a provozní analýza recepce SVJ (2026)</h1>
+      <p>Kompletní srovnání 4 variant provozu recepce: Bezpečnostní/personální agentura vs. vlastní kmenoví zaměstnanci SVJ v režimu <strong>24/7/365</strong> a v denním režimu <strong>6:00–22:00 (bez státních svátků)</strong>.</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn" onclick="window.print()">🖨️ Vytisknout / Uložit PDF pro shromáždění</button>
+    </div>
+  </header>
+
+  <!-- INTERACTIVE CONTROLS -->
+  <section class="controls-panel">
+    <div class="control-group">
+      <label for="yearSelect">Legislativní rok (Minimální mzda)</label>
+      <select id="yearSelect" onchange="recalculate()">
+        <option value="2026" selected>Rok 2026 (Min. mzda 22 400 Kč / 134,40 Kč/h)</option>
+        <option value="2025">Rok 2025 (Min. mzda 20 800 Kč / 124,40 Kč/h)</option>
+      </select>
+    </div>
+
+    <div class="control-group">
+      <label for="agencyRate">Sazba agentury bez DPH (Kč/hod.)</label>
+      <div class="control-input-wrap">
+        <input type="number" id="agencyRate" value="236" min="150" max="600" step="1" oninput="recalculate()" />
+      </div>
+    </div>
+
+    <div class="control-group">
+      <label>Režim DPH u agentury (SVJ neplátce)</label>
+      <div class="segmented-control">
+        <button id="vatYes" class="active" onclick="setVat(true)">+ 21 % DPH (285,56 Kč)</button>
+        <button id="vatNo" onclick="setVat(false)">Bez DPH (236 Kč)</button>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <label for="unitCount">Počet bytových jednotek v domě</label>
+      <div class="control-input-wrap">
+        <input type="number" id="unitCount" value="240" min="1" max="1000" step="1" oninput="recalculate()" />
+      </div>
+    </div>
+
+    <div class="control-group">
+      <label>Zobrazení částek v tabulce</label>
+      <div class="segmented-control">
+        <button id="periodYear" class="active" onclick="setPeriod('year')">Ročně</button>
+        <button id="periodMonth" onclick="setPeriod('month')">Měsíčně</button>
+        <button id="periodUnit" onclick="setPeriod('unit')">Měsíčně / 1 byt</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 VARIANT KPI CARDS -->
+  <section class="cards-grid">
+    <!-- Card 1: Agency 24/7 -->
+    <div class="variant-card baseline">
+      <div>
+        <span class="badge-top badge-danger">Varianta 1 • Současný stav</span>
+        <div class="variant-title">Agentura 24/7/365</div>
+        <div class="variant-subtitle">Nepřetržitý provoz (vč. nocí, víkendů a svátků)</div>
+        <div class="price-main" id="card1-main">2 501 506 Kč/rok</div>
+        <div class="price-sub" id="card1-sub">208 459 Kč/měsíc • 2 085 Kč/byt/měs.</div>
+        <div class="savings-pill badge-danger" id="card1-diff">Výchozí srovnávací základna (nejdražší)</div>
+      </div>
+      <div class="meta-list">
+        <div class="meta-row"><span>Roční fond hodin:</span><span>8 760 hod.</span></div>
+        <div class="meta-row"><span>Efektivní cena za 1 hod.:</span><span id="card1-hour">285,56 Kč</span></div>
+        <div class="meta-row"><span>Garantuje zástupy:</span><span>Ano (Agentura)</span></div>
+        <div class="meta-row"><span>Zátěž výboru SVJ:</span><span style="color:var(--success)">Minimální (1 faktura)</span></div>
+      </div>
+    </div>
+
+    <!-- Card 2: Agency 6-22 -->
+    <div class="variant-card agency-day">
+      <div>
+        <span class="badge-top badge-warning">Varianta 2 • Bez starostí</span>
+        <div class="variant-title">Agentura 6:00 – 22:00</div>
+        <div class="variant-subtitle">Denní provoz vč. víkendů (zavřeno o svátcích)</div>
+        <div class="price-main" id="card2-main">1 608 274 Kč/rok</div>
+        <div class="price-sub" id="card2-sub">134 023 Kč/měsíc • 1 340 Kč/byt/měs.</div>
+        <div class="savings-pill badge-warning" id="card2-diff">Úspora 893 232 Kč/rok (-35,7 %)</div>
+      </div>
+      <div class="meta-list">
+        <div class="meta-row"><span>Roční fond hodin:</span><span>5 632 hod. (352 dní)</span></div>
+        <div class="meta-row"><span>Efektivní cena za 1 hod.:</span><span id="card2-hour">285,56 Kč</span></div>
+        <div class="meta-row"><span>Garantuje zástupy:</span><span>Ano (Agentura)</span></div>
+        <div class="meta-row"><span>Zátěž výboru SVJ:</span><span style="color:var(--success)">Minimální (1 faktura)</span></div>
+      </div>
+    </div>
+
+    <!-- Card 3: In-house 24/7 -->
+    <div class="variant-card inhouse-24">
+      <div>
+        <span class="badge-top badge-primary">Varianta 3 • Vysoké riziko pro výbor</span>
+        <div class="variant-title">Vlastní zaměstnanci 24/7</div>
+        <div class="variant-subtitle">5× HPP + 1–2 brigádníci (nepřetržitý provoz)</div>
+        <div class="price-main" id="card3-main">2 132 978 Kč/rok</div>
+        <div class="price-sub" id="card3-sub">177 748 Kč/měsíc • 1 777 Kč/byt/měs.</div>
+        <div class="savings-pill badge-primary" id="card3-diff">Úspora 368 528 Kč/rok (-14,7 %)</div>
+      </div>
+      <div class="meta-list">
+        <div class="meta-row"><span>Roční fond hodin:</span><span>8 760 hod. (fond 37,5 h/týd.)</span></div>
+        <div class="meta-row"><span>Celkový náklad na 1 hod.:</span><span id="card3-hour">243,49 Kč</span></div>
+        <div class="meta-row"><span>Závodní lékař / BOZP:</span><span style="color:var(--danger)">Povinný (Riziko noční práce)</span></div>
+        <div class="meta-row"><span>Zátěž výboru SVJ:</span><span style="color:var(--danger)">Extrémní (noční výpadky)</span></div>
+      </div>
+    </div>
+
+    <!-- Card 4: In-house 6-22 -->
+    <div class="variant-card recommended">
+      <div>
+        <span class="badge-top badge-success">Varianta 4 • Nejlepší poměr cena / riziko</span>
+        <div class="variant-title">Vlastní zaměstnanci 6:00–22:00</div>
+        <div class="variant-subtitle">3× HPP + 1 brigádník (bez nocí a svátků)</div>
+        <div class="price-main" id="card4-main">1 246 920 Kč/rok</div>
+        <div class="price-sub" id="card4-sub">103 910 Kč/měsíc • 1 039 Kč/byt/měs.</div>
+        <div class="savings-pill badge-success" id="card4-diff">Úspora 1 254 586 Kč/rok (-50,2 %)</div>
+      </div>
+      <div class="meta-list">
+        <div class="meta-row"><span>Roční fond hodin:</span><span>5 632 hod. (fond 38,75 h/týd.)</span></div>
+        <div class="meta-row"><span>Celkový náklad na 1 hod.:</span><span id="card4-hour">221,40 Kč</span></div>
+        <div class="meta-row"><span>Závodní lékař / BOZP:</span><span style="color:var(--success)">Není nutný (Kategorie 1)</span></div>
+        <div class="meta-row"><span>Zátěž výboru SVJ:</span><span style="color:var(--warning)">Střední (bez nočních krizí)</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VISUAL COST STRUCTURE CHART -->
+  <section class="section-card">
+    <div class="section-header">
+      <div>
+        <h2 class="section-title">Vizualizace struktury nákladů (Z čeho se skládá výsledná cena)</h2>
+        <p class="section-desc">Srovnání podílu přímých mezd, zákonných příplatků, odvodů státu, režie a neodpočitatelného 21% DPH u agentury.</p>
+      </div>
+    </div>
+
+    <div class="chart-container" id="chartContainer">
+      <!-- Populated by JS -->
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><span class="legend-dot seg-base"></span><span>Základní mzda / Fakturace bez DPH</span></div>
+      <div class="legend-item"><span class="legend-dot seg-bonuses"></span><span>Zákonné příplatky a náhrady (noc, víkend, svátek, dovolená, nemoc)</span></div>
+      <div class="legend-item"><span class="legend-dot seg-tax"></span><span>Odvody zaměstnavatele (34,22 %: ČSSZ, ZP, Kooperativa)</span></div>
+      <div class="legend-item"><span class="legend-dot seg-admin"></span><span>Režie SVJ (účetní, BOZP, lékař, vybavení, fluktuace)</span></div>
+      <div class="legend-item"><span class="legend-dot seg-vat"></span><span>21 % DPH (náklad pro SVJ neplátce DPH)</span></div>
+    </div>
+  </section>
+
+  <!-- DETAILED BREAKDOWN TABLE -->
+  <section class="section-card">
+    <div class="section-header">
+      <div>
+        <h2 class="section-title">Detailní položkový rozpad nákladů</h2>
+        <p class="section-desc" id="tableSubtitle">Zobrazeny roční hodnoty v Kč pro rok 2026. Přepínačem nahoře můžete přepnout na měsíční náklady nebo náklad na 1 byt.</p>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 34%;">Nákladová položka / Parametr</th>
+            <th>1. Agentura 24/7</th>
+            <th>2. Agentura 6:00–22:00</th>
+            <th>3. Vlastní 24/7</th>
+            <th class="col-highlight">4. Vlastní 6:00–22:00</th>
+          </tr>
+        </thead>
+        <tbody id="breakdownBody">
+          <!-- Populated dynamically by JS -->
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- OBLIGATIONS & RISKS FOR SVJ COMMITTEE -->
+  <section class="section-card">
+    <div class="section-header">
+      <div>
+        <h2 class="section-title">Povinnosti a právní odpovědnost SVJ / Výboru SVJ dle varianty</h2>
+        <p class="section-desc">Přehled agendy, zákonných povinností a osobního ručení členů výboru (§ 159 OZ – péče řádného hospodáře).</p>
+      </div>
+    </div>
+
+    <div class="tabs-nav">
+      <button class="tab-btn active" onclick="filterObligations('all', this)">Zobrazit všechny 4 varianty vedle sebe</button>
+      <button class="tab-btn" onclick="filterObligations('diff', this)">Co přesně odpadne zrušením nočního provozu (24/7 → 6:00–22:00)?</button>
+    </div>
+
+    <div id="obligationsAll" class="obligations-grid">
+      <!-- Variant 1: Agency 24/7 -->
+      <div class="ob-card">
+        <h4>
+          <span>1. Agentura 24/7/365</span>
+          <span class="badge-top badge-success" style="margin:0;">Nízká zátěž</span>
+        </h4>
+        <ul class="ob-list check-list">
+          <li><strong>Smluvní a fakturační agenda:</strong> Kontrola 1 měsíční faktury a výkazu odpracovaných hodin (8 760 h/rok).</li>
+          <li><strong>Nulová pracovněprávní agenda:</strong> SVJ neřeší pracovní smlouvy, odvody, neschopenky ani dovolené.</li>
+          <li><strong>Garantované zástupy 24/7:</strong> Při náhlé nemoci recepčního posílá náhradníka dispečink agentury.</li>
+          <li><strong>Výměna nevhodného pracovníka:</strong> Okamžitá reklamace e-mailem bez výpovědních dob a odstupného.</li>
+          <li><strong>Vysoké krytí škod:</strong> Komerční pojištění odpovědnosti agentury (zpravidla 10–50 mil. Kč).</li>
+          <li><strong>BOZP na pracovišti:</strong> Pouze základní poučení agentury o rizicích v budově a požárních směrnicích domu.</li>
+        </ul>
+      </div>
+
+      <!-- Variant 2: Agency 6:00 - 22:00 -->
+      <div class="ob-card">
+        <h4>
+          <span>2. Agentura 6:00 – 22:00</span>
+          <span class="badge-top badge-success" style="margin:0;">Nízká zátěž</span>
+        </h4>
+        <ul class="ob-list check-list">
+          <li><strong>Stejný komfort jako u Agentury 24/7:</strong> Veškerou personalistiku, mzdy a zástupy drží agentura.</li>
+          <li><strong>Nastavení režimu budovy 22:00–06:00:</strong> Výbor musí technicky zajistit automatické uzamčení vchodu (čipy, kamerový záznam, zvonkové tablo pro IZS/kurýry).</li>
+          <li><strong>Komunikace s vlastníky:</strong> Informování domu o provozní době recepce a uzavření o 13 státních svátcích.</li>
+          <li><strong>Kontrola nižší fakturace:</strong> Kontrola 5 632 odpracovaných hodin ročně (úspora 3 128 hodin oproti 24/7).</li>
+        </ul>
+      </div>
+
+      <!-- Variant 3: In-house 24/7 -->
+      <div class="ob-card" style="border-color: #fca5a5; background: #fffcfc;">
+        <h4>
+          <span>3. Vlastní zaměstnanci 24/7</span>
+          <span class="badge-top badge-danger" style="margin:0;">Extrémní riziko</span>
+        </h4>
+        <ul class="ob-list danger-list">
+          <li><strong>Plná registrace zaměstnavatele:</strong> Přihlášení SVJ na ČSSZ (do 8 dnů), zdravotní pojišťovny, FÚ a zákonné pojištění Kooperativa.</li>
+          <li><strong>Povinný závodní lékař (§ 94 ZP):</strong> Práce v noci = rizikový faktor. Nutná písemná smlouva s lékařem, vstupní prohlídka před 1. noční směnou a periodické prohlídky každé 2 roky.</li>
+          <li><strong>Složitý rozvrh směn (§ 84 ZP):</strong> Rozpis 2 týdny předem pro 5 HPP + brigádníky, hlídání nepřetržitého odpočinku (min. 11 h / 8 h) a limitu 8 h průměrné noční směny za 26 týdnů.</li>
+          <li><strong>Placené přestávky (§ 88 ZP):</strong> Osamocený recepční nemůže opustit stanoviště → přiměřená doba na jídlo a oddech se plně proplácí.</li>
+          <li><strong>Noční pohotovost výboru:</strong> Když recepční ve 21:30 nedorazí na směnu, člen výboru musí okamžitě sehnat brigádníka nebo jít sloužit sám.</li>
+          <li><strong>Omezená náhrada škody (§ 257 ZP):</strong> Zaměstnanec ručí za škodu z nedbalosti max. do 4,5násobku průměrného výdělku.</li>
+          <li><strong>Osobní ručení výboru (§ 159 OZ):</strong> Pokuty od SÚIP (až 2 mil. Kč) za porušení zákoníku práce jdou k tíži SVJ s regresem vůči členům výboru.</li>
+        </ul>
+      </div>
+
+      <!-- Variant 4: In-house 6:00 - 22:00 -->
+      <div class="ob-card" style="border-color: #86efac; background: #f8fef9;">
+        <h4>
+          <span>4. Vlastní zaměstnanci 6:00–22:00</span>
+          <span class="badge-top badge-warning" style="margin:0;">Zvládnutelná zátěž</span>
+        </h4>
+        <ul class="ob-list neutral-list">
+          <li><strong>Mzdová a odvodová agenda (pro 3 HPP + 1 DPP):</strong> Lze plně delegovat na externí mzdovou účetní / správce domu (cca 1 300 Kč/měs.).</li>
+          <li><strong>BEZ závodního lékaře (Kategorie 1):</strong> Bez nočních směn jde o nerizikovou práci kat. 1 (zákon č. 373/2011 Sb.) – stačí výpis z dokumentace od praktického lékaře zaměstnance, žádné periodické prohlídky.</li>
+          <li><strong>Jednoduchý dvousměnný provoz:</strong> Ranní (6:00–14:00) a odpolední (14:00–22:00). Mezi 22:00 a 06:00 má dům 8h klid – neriskujete porušení denních odpočinků.</li>
+          <li><strong>Žádná agenda svátků a nočních příplatků:</strong> O svátcích je zavřeno (odpadají 100% příplatky a náhradní volna), účtuje se jen 10 % za víkend.</li>
+          <li><strong>Žádné noční kolapsy:</strong> Případný výpadek recepčního se řeší ve dne; v nouzi lze recepci na pár hodin uzamknout bez nočního bezpečnostního rizika.</li>
+          <li><strong>Nižší fluktuace:</strong> 8hodinové denní směny bez nocí a svátků jsou velmi žádané (aktivní senioři, rodiče).</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Highlight Box: What disappears when dropping night shifts -->
+    <div id="obligationsDiff" class="diff-box" style="display: block;">
+      <h4>💡 Přehled povinností, které výboru SVJ ZCELA ODPADAJÍ při přechodu z 24/7 na denní režim (6:00–22:00 bez svátků):</h4>
+      <div class="diff-columns">
+        <div class="diff-item">
+          <strong>1. Konec smluvního závodního lékaře</strong>
+          Odpadá povinnost smlouvy s poskytovatelem pracovnělékařských služeb a povinné periodické prohlídky každé 2 roky (§ 94 ZP). U kategorie 1 stačí vstupní prohlídka u běžného praktika.
+        </div>
+        <div class="diff-item">
+          <strong>2. Konec krizových nočních zástupů</strong>
+          Žádné telefonáty ve 22:00, že noční směna nepřišla nebo usnula. Přes den je v domě běžný provoz a krátkodobý výpadek neohrozí noční bezpečnost objektu.
+        </div>
+        <div class="diff-item">
+          <strong>3. Konec rizik BOZP osamoceného nočního pracovníka</strong>
+          Odpadá povinnost instalovat nouzová SOS tlačítka, mrtvého muže či pravidelné noční hlášení ostraze pro případ kolapsu recepčního v noci.
+        </div>
+        <div class="diff-item">
+          <strong>4. Konec 100% příplatků a obhajoby práce ve svátek</strong>
+          Zavřením o 13 státních svátcích odpadá složité proplácení 100% příplatků (§ 115 ZP), evidence náhradního volna i zákonné zdůvodňování práce ve svátek (§ 91 ZP).
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+  // State
+  let includeVat = true;
+  let displayPeriod = 'year'; // 'year' | 'month' | 'unit'
+
+  // Constants for 2026 and 2025 based on Czech Labor Code
+  const YEAR_DATA = {
+    2026: {
+      minMonthly: 22400,
+      rate24: 143.36, // 37.5h/week
+      rateDay: 138.74, // 38.75h/week
+      v3: {
+        hours: 8760,
+        baseWage: 1255834,
+        nightBonus: 41861,    // 2920h * 14.336
+        weekendBonus: 35783,  // 2496h * 14.336
+        holidayBonus: 44728,  // 312h * 143.36
+        vacationPay: 105725,  // 4 weeks on 4.48 FTE
+        sickPay: 34455,       // days 1-14 (~2.5%)
+        adminPayroll: 26000,
+        adminMedical: 13000,
+        adminEquip: 24000,
+        adminTurnover: 32000
+      },
+      v4: {
+        hours: 5632,
+        baseWage: 781384,
+        nightBonus: 0,
+        weekendBonus: 22642,  // 1632h * 13.874
+        holidayBonus: 0,
+        vacationPay: 61672,
+        sickPay: 20101,
+        adminPayroll: 16000,
+        adminMedical: 5000,
+        adminEquip: 22000,
+        adminTurnover: 15000
+      }
+    },
+    2025: {
+      minMonthly: 20800,
+      rate24: 132.70, // 37.5h/week
+      rateDay: 128.41, // 38.75h/week
+      v3: {
+        hours: 8760,
+        baseWage: 1162452,
+        nightBonus: 38748,
+        weekendBonus: 33122,
+        holidayBonus: 41402,
+        vacationPay: 97864,
+        sickPay: 31893,
+        adminPayroll: 24000,
+        adminMedical: 12000,
+        adminEquip: 24000,
+        adminTurnover: 30000
+      },
+      v4: {
+        hours: 5632,
+        baseWage: 723205,
+        nightBonus: 0,
+        weekendBonus: 20751,
+        holidayBonus: 0,
+        vacationPay: 57065,
+        sickPay: 18599,
+        adminPayroll: 15000,
+        adminMedical: 5000,
+        adminEquip: 20000,
+        adminTurnover: 15000
+      }
+    }
+  };
+
+  function formatKc(num) {
+    return Math.round(num).toLocaleString('cs-CZ') + ' Kč';
+  }
+
+  function formatKcDec(num) {
+    return num.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' Kč';
+  }
+
+  function setVat(val) {
+    includeVat = val;
+    document.getElementById('vatYes').classList.toggle('active', val);
+    document.getElementById('vatNo').classList.toggle('active', !val);
+    recalculate();
+  }
+
+  function setPeriod(period) {
+    displayPeriod = period;
+    document.getElementById('periodYear').classList.toggle('active', period === 'year');
+    document.getElementById('periodMonth').classList.toggle('active', period === 'month');
+    document.getElementById('periodUnit').classList.toggle('active', period === 'unit');
+    recalculate();
+  }
+
+  function filterObligations(mode, btn) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const allGrid = document.getElementById('obligationsAll');
+    const diffBox = document.getElementById('obligationsDiff');
+    if (mode === 'all') {
+      allGrid.style.display = 'grid';
+      diffBox.style.display = 'block';
+    } else {
+      allGrid.style.display = 'none';
+      diffBox.style.display = 'block';
+    }
+  }
+
+  function scaleVal(annualVal, units) {
+    if (displayPeriod === 'year') return annualVal;
+    if (displayPeriod === 'month') return annualVal / 12;
+    return annualVal / 12 / units;
+  }
+
+  function recalculate() {
+    const year = document.getElementById('yearSelect').value;
+    const d = YEAR_DATA[year];
+    const agencyBaseRate = parseFloat(document.getElementById('agencyRate').value) || 236;
+    const units = Math.max(1, parseInt(document.getElementById('unitCount').value, 10) || 240);
+
+    // Update VAT toggle button text
+    const rateWithVat = agencyBaseRate * 1.21;
+    document.getElementById('vatYes').textContent = `+ 21 % DPH (${rateWithVat.toLocaleString('cs-CZ', {maximumFractionDigits: 2})} Kč)`;
+    document.getElementById('vatNo').textContent = `Bez DPH (${agencyBaseRate} Kč)`;
+
+    // 1. Agency 24/7 calculations
+    const v1Net = 8760 * agencyBaseRate;
+    const v1Vat = includeVat ? v1Net * 0.21 : 0;
+    const v1Total = v1Net + v1Vat;
+    const v1Hourly = v1Total / 8760;
+
+    // 2. Agency 6:00-22:00 calculations
+    const v2Net = 5632 * agencyBaseRate;
+    const v2Vat = includeVat ? v2Net * 0.21 : 0;
+    const v2Total = v2Net + v2Vat;
+    const v2Hourly = v2Total / 5632;
+
+    // 3. In-house 24/7 calculations
+    const v3Gross = d.v3.baseWage + d.v3.nightBonus + d.v3.weekendBonus + d.v3.holidayBonus + d.v3.vacationPay + d.v3.sickPay;
+    const v3Health = Math.round(v3Gross * 0.09);
+    const v3Social = Math.round(v3Gross * 0.248);
+    const v3Injury = Math.round(v3Gross * 0.0042);
+    const v3Contributions = v3Health + v3Social + v3Injury;
+    const v3DirectLabor = v3Gross + v3Contributions;
+    const v3Admin = d.v3.adminPayroll + d.v3.adminMedical + d.v3.adminEquip + d.v3.adminTurnover;
+    const v3Total = v3DirectLabor + v3Admin;
+    const v3Hourly = v3Total / 8760;
+
+    // 4. In-house 6:00-22:00 calculations
+    const v4Gross = d.v4.baseWage + d.v4.nightBonus + d.v4.weekendBonus + d.v4.holidayBonus + d.v4.vacationPay + d.v4.sickPay;
+    const v4Health = Math.round(v4Gross * 0.09);
+    const v4Social = Math.round(v4Gross * 0.248);
+    const v4Injury = Math.round(v4Gross * 0.0042);
+    const v4Contributions = v4Health + v4Social + v4Injury;
+    const v4DirectLabor = v4Gross + v4Contributions;
+    const v4Admin = d.v4.adminPayroll + d.v4.adminMedical + d.v4.adminEquip + d.v4.adminTurnover;
+    const v4Total = v4DirectLabor + v4Admin;
+    const v4Hourly = v4Total / 5632;
+
+    // Update KPI Cards
+    updateCard(1, v1Total, v1Hourly, v1Total, units, true);
+    updateCard(2, v2Total, v2Hourly, v1Total, units, false);
+    updateCard(3, v3Total, v3Hourly, v1Total, units, false);
+    updateCard(4, v4Total, v4Hourly, v1Total, units, false);
+
+    // Render Bar Chart
+    renderChart([
+      {
+        title: "1. Agentura 24/7/365",
+        sub: "8 760 hod./rok",
+        base: v1Net,
+        bonuses: 0,
+        tax: 0,
+        admin: 0,
+        vat: v1Vat,
+        total: v1Total
+      },
+      {
+        title: "2. Agentura 6:00–22:00",
+        sub: "5 632 hod./rok (bez svátků)",
+        base: v2Net,
+        bonuses: 0,
+        tax: 0,
+        admin: 0,
+        vat: v2Vat,
+        total: v2Total
+      },
+      {
+        title: "3. Vlastní zaměstnanci 24/7",
+        sub: "5× HPP + brigádníci (8 760 hod.)",
+        base: d.v3.baseWage,
+        bonuses: v3Gross - d.v3.baseWage,
+        tax: v3Contributions,
+        admin: v3Admin,
+        vat: 0,
+        total: v3Total
+      },
+      {
+        title: "4. Vlastní zaměstnanci 6:00–22:00",
+        sub: "3× HPP + brigádník (5 632 hod.)",
+        base: d.v4.baseWage,
+        bonuses: v4Gross - d.v4.baseWage,
+        tax: v4Contributions,
+        admin: v4Admin,
+        vat: 0,
+        total: v4Total
+      }
+    ]);
+
+    // Update Subtitle
+    const periodNames = {
+      year: `Zobrazeny ROČNÍ hodnoty v Kč pro rok ${year}.`,
+      month: `Zobrazeny MĚSÍČNÍ průměrné hodnoty v Kč pro rok ${year}.`,
+      unit: `Zobrazeny MĚSÍČNÍ náklady přepočtené na 1 bytovou jednotku (při ${units} bytech v domě) pro rok ${year}.`
+    };
+    document.getElementById('tableSubtitle').textContent = periodNames[displayPeriod];
+
+    // Render Table
+    const tbody = document.getElementById('breakdownBody');
+    tbody.innerHTML = `
+      <tr class="category-row"><td colspan="5">1. Provozní a personální parametry (${year})</td></tr>
+      <tr>
+        <td>Roční fond provozních hodin recepce<span class="note-inline">Počet hodin fyzického pokrytí recepce za rok</span></td>
+        <td>8 760 hod.</td>
+        <td>5 632 hod.</td>
+        <td>8 760 hod.</td>
+        <td class="col-highlight">5 632 hod.</td>
+      </tr>
+      <tr>
+        <td>Pracovní režim a týdenní fond dle Zákoníku práce<span class="note-inline">§ 79 ZP – zkrácená pracovní doba ve směnném provozu</span></td>
+        <td>Dodavatelsky (Smlouva)</td>
+        <td>Dodavatelsky (Smlouva)</td>
+        <td>Nepřetržitý (37,5 h/týd.)</td>
+        <td class="col-highlight">Dvousměnný (38,75 h/týd.)</td>
+      </tr>
+      <tr>
+        <td>Potřebný počet pracovníků (FTE / fyzické osoby)<span class="note-inline">Započteno krytí dovolených (4 týdny) a nemocnosti (~5,5 %)</span></td>
+        <td>Drží agentura</td>
+        <td>Drží agentura</td>
+        <td>4,48 FTE (5 HPP + 1–2 DPP)</td>
+        <td class="col-highlight">2,79 FTE (3 HPP + 1 DPP)</td>
+      </tr>
+      <tr>
+        <td>Základní hodinová sazba (Min. mzda ${year} / Sazba agentury)<span class="note-inline">Přepočet dle § 111 odst. 3 ZP na příslušný týdenní úvazek</span></td>
+        <td>${formatKcDec(agencyBaseRate)}/h bez DPH</td>
+        <td>${formatKcDec(agencyBaseRate)}/h bez DPH</td>
+        <td>${formatKcDec(d.rate24)}/h hrubého</td>
+        <td class="col-highlight">${formatKcDec(d.rateDay)}/h hrubého</td>
+      </tr>
+
+      <tr class="category-row"><td colspan="5">2. Přímé mzdové náklady / Fakturace agentury</td></tr>
+      <tr>
+        <td>Základní hrubá mzda / Základní fakturace agentury bez DPH<span class="note-inline">Odpracované hodiny × základní hodinová sazba</span></td>
+        <td>${formatKc(scaleVal(v1Net, units))}</td>
+        <td>${formatKc(scaleVal(v2Net, units))}</td>
+        <td>${formatKc(scaleVal(d.v3.baseWage, units))}</td>
+        <td class="col-highlight">${formatKc(scaleVal(d.v4.baseWage, units))}</td>
+      </tr>
+      <tr>
+        <td>Příplatky za noční práci – min. 10 % (§ 116 ZP)<span class="note-inline">22:00–06:00 (2 920 hod. ročně u provozu 24/7)</span></td>
+        <td>V ceně agentury</td>
+        <td>0 Kč (v noci zavřeno)</td>
+        <td>${formatKc(scaleVal(d.v3.nightBonus, units))}</td>
+        <td class="col-highlight">0 Kč (v noci zavřeno)</td>
+      </tr>
+      <tr>
+        <td>Příplatky za práci v sobotu a neděli – min. 10 % (§ 118 ZP)<span class="note-inline">2 496 hod. u 24/7 vs. 1 632 hod. u denního režimu</span></td>
+        <td>V ceně agentury</td>
+        <td>V ceně agentury</td>
+        <td>${formatKc(scaleVal(d.v3.weekendBonus, units))}</td>
+        <td class="col-highlight">${formatKc(scaleVal(d.v4.weekendBonus, units))}</td>
+      </tr>
+      <tr>
+        <td>Příplatky za státní svátky – 100 % (§ 115 ZP)<span class="note-inline">13 svátků = 312 hod. u 24/7 (u denního režimu je o svátcích zavřeno)</span></td>
+        <td>V ceně agentury</td>
+        <td>0 Kč (zavřeno)</td>
+        <td>${formatKc(scaleVal(d.v3.holidayBonus, units))}</td>
+        <td class="col-highlight">0 Kč (o svátcích zavřeno)</td>
+      </tr>
+      <tr>
+        <td>Náhrada mzdy za dovolenou (min. 4 týdny / rok)<span class="note-inline">Vypláceno průměrným hodinovým výdělkem (vč. příplatků)</span></td>
+        <td>V ceně agentury</td>
+        <td>V ceně agentury</td>
+        <td>${formatKc(scaleVal(d.v3.vacationPay, units))}</td>
+        <td class="col-highlight">${formatKc(scaleVal(d.v4.vacationPay, units))}</td>
+      </tr>
+      <tr>
+        <td>Náhrada mzdy při dočasné pracovní neschopnosti (dny 1–14)<span class="note-inline">Hradí přímo zaměstnavatel (odhad 2,5 % z objemu mezd)</span></td>
+        <td>V ceně agentury</td>
+        <td>V ceně agentury</td>
+        <td>${formatKc(scaleVal(d.v3.sickPay, units))}</td>
+        <td class="col-highlight">${formatKc(scaleVal(d.v4.sickPay, units))}</td>
+      </tr>
+      <tr class="subtotal-row">
+        <td>Mezisoučet: Hrubé mzdy a náhrady / Fakturace bez DPH</td>
+        <td>${formatKc(scaleVal(v1Net, units))}</td>
+        <td>${formatKc(scaleVal(v2Net, units))}</td>
+        <td>${formatKc(scaleVal(v3Gross, units))}</td>
+        <td class="col-highlight">${formatKc(scaleVal(v4Gross, units))}</td>
+      </tr>
+
+      <tr class="category-row"><td colspan="5">3. Zákonné odvody státu (34,22 %) a DPH (21 %)</td></tr>
+      <tr>
+        <td>Sociální pojištění hrazené zaměstnavatelem (24,8 %)<span class="note-inline">Odvod ČSSZ z celkového vyměřovacího základu hrubých mezd</span></td>
+        <td>—</td>
+        <td>—</td>
+        <td>${formatKc(scaleVal(v3Social, units))}</td>
+        <td class="col-highlight">${formatKc(scaleVal(v4Social, units))}</td>
+      </tr>
+      <tr>
+        <td>Zdravotní pojištění hrazené zaměstnavatelem (9,0 %)<span class="note-inline">Odvod příslušným zdravotním pojišťovnám zaměstnanců</span></td>
+        <td>—</td>
+        <td>—</td>
+        <td>${formatKc(scaleVal(v3Health, units))}</td>
+        <td class="col-highlight">${formatKc(scaleVal(v4Health, units))}</td>
+      </tr>
+      <tr>
+        <td>Zákonné úrazové pojištění Kooperativa (0,42 %)<span class="note-inline">Vyhláška č. 125/1993 Sb. pro správu nemovitostí</span></td>
+        <td>—</td>
+        <td>—</td>
+        <td>${formatKc(scaleVal(v3Injury, units))}</td>
+        <td class="col-highlight">${formatKc(scaleVal(v4Injury, units))}</td>
+      </tr>
+      <tr>
+        <td>DPH 21 % na faktuře agentury<span class="note-inline">SVJ není plátcem DPH – daň nelze odečíst a tvoří přímý náklad domu</span></td>
+        <td>${formatKc(scaleVal(v1Vat, units))}</td>
+        <td>${formatKc(scaleVal(v2Vat, units))}</td>
+        <td>0 Kč (Mzdy jsou bez DPH)</td>
+        <td class="col-highlight">0 Kč (Mzdy jsou bez DPH)</td>
+      </tr>
+      <tr class="subtotal-row">
+        <td>Mezisoučet: Přímá cena práce / Fakturace vč. DPH</td>
+        <td>${formatKc(scaleVal(v1Total, units))}</td>
+        <td>${formatKc(scaleVal(v2Total, units))}</td>
+        <td>${formatKc(scaleVal(v3DirectLabor, units))}</td>
+        <td class="col-highlight">${formatKc(scaleVal(v4DirectLabor, units))}</td>
+      </tr>
+
+      <tr class="category-row"><td colspan="5">4. Provozní, mzdová a lékařská režie SVJ</td></tr>
+      <tr>
+        <td>Zpracování mezd a personální administrativa<span class="note-inline">Externí mzdová účetní (výplatní pásky, ELDP, přihlášky/odhlášky)</span></td>
+        <td>0 Kč</td>
+        <td>0 Kč</td>
+        <td>${formatKc(scaleVal(d.v3.adminPayroll, units))}</td>
+        <td class="col-highlight">${formatKc(scaleVal(d.v4.adminPayroll, units))}</td>
+      </tr>
+      <tr>
+        <td>Pracovnělékařská péče (závodní lékař) a BOZP<span class="note-inline">U 24/7 povinné periodické prohlídky pro noční práci (§ 94 ZP)</span></td>
+        <td>0 Kč</td>
+        <td>0 Kč</td>
+        <td>${formatKc(scaleVal(d.v3.adminMedical, units))}</td>
+        <td class="col-highlight">${formatKc(scaleVal(d.v4.adminMedical, units))}</td>
+      </tr>
+      <tr>
+        <td>Vybavení recepce, telefon, ošacení a provozní potřeby<span class="note-inline">Stejnokroj, telefonní tarif, evidence klíčů, drobný materiál</span></td>
+        <td>0 Kč (v režii agentury)</td>
+        <td>0 Kč (v režii agentury)</td>
+        <td>${formatKc(scaleVal(d.v3.adminEquip, units))}</td>
+        <td class="col-highlight">${formatKc(scaleVal(d.v4.adminEquip, units))}</td>
+      </tr>
+      <tr>
+        <td>Náklady na fluktuaci, inzerci a zástupové přesčasy<span class="note-inline">Práce v noci za min. mzdu trpí výrazně vyšší fluktuací než denní směny</span></td>
+        <td>0 Kč (garantuje agentura)</td>
+        <td>0 Kč (garantuje agentura)</td>
+        <td>${formatKc(scaleVal(d.v3.adminTurnover, units))}</td>
+        <td class="col-highlight">${formatKc(scaleVal(d.v4.adminTurnover, units))}</td>
+      </tr>
+
+      <tr class="grandtotal-row">
+        <td>CELKOVÉ NÁKLADY SVJ (${displayPeriod === 'year' ? 'ROČNĚ' : displayPeriod === 'month' ? 'MĚSÍČNĚ' : 'MĚSÍČNĚ NA 1 BYT'})</td>
+        <td>${formatKc(scaleVal(v1Total, units))}</td>
+        <td>${formatKc(scaleVal(v2Total, units))}</td>
+        <td>${formatKc(scaleVal(v3Total, units))}</td>
+        <td class="col-highlight">${formatKc(scaleVal(v4Total, units))}</td>
+      </tr>
+      <tr>
+        <td><strong>Úspora oproti současnému stavu (Agentura 24/7)</strong></td>
+        <td><strong>0 Kč (Výchozí stav)</strong></td>
+        <td style="color:var(--success); font-weight:700;">${formatKc(scaleVal(v2Total - v1Total, units))}</td>
+        <td style="color:${v3Total - v1Total <= 0 ? 'var(--success)' : 'var(--danger)'}; font-weight:700;">${formatKc(scaleVal(v3Total - v1Total, units))}</td>
+        <td class="col-highlight" style="color:var(--success); font-weight:800;">${formatKc(scaleVal(v4Total - v1Total, units))}</td>
+      </tr>
+      <tr>
+        <td><strong>Reálný celkový náklad SVJ na 1 hodinu provozu</strong></td>
+        <td><strong>${formatKcDec(v1Hourly)}/hod.</strong></td>
+        <td><strong>${formatKcDec(v2Hourly)}/hod.</strong></td>
+        <td><strong>${formatKcDec(v3Hourly)}/hod.</strong></td>
+        <td class="col-highlight"><strong>${formatKcDec(v4Hourly)}/hod.</strong></td>
+      </tr>
+    `;
+  }
+
+  function updateCard(index, totalAnnual, hourly, baselineAnnual, units, isBaseline) {
+    const monthly = totalAnnual / 12;
+    const perUnit = monthly / units;
+    document.getElementById(`card${index}-main`).textContent = `${formatKc(totalAnnual)}/rok`;
+    document.getElementById(`card${index}-sub`).textContent = `${formatKc(monthly)}/měsíc • ${formatKc(perUnit)}/byt/měs.`;
+    document.getElementById(`card${index}-hour`).textContent = formatKcDec(hourly);
+
+    if (!isBaseline) {
+      const diff = totalAnnual - baselineAnnual;
+      const pct = ((diff / baselineAnnual) * 100).toFixed(1);
+      const diffEl = document.getElementById(`card${index}-diff`);
+      if (diff <= 0) {
+        diffEl.textContent = `Úspora ${formatKc(Math.abs(diff))}/rok (${pct} %)`;
+      } else {
+        diffEl.textContent = `Dražší o +${formatKc(diff)}/rok (+${pct} %)`;
+      }
+    }
+  }
+
+  function renderChart(items) {
+    const maxTotal = Math.max(...items.map(i => i.total));
+    const container = document.getElementById('chartContainer');
+    container.innerHTML = items.map(item => {
+      const wBase = (item.base / maxTotal) * 100;
+      const wBonuses = (item.bonuses / maxTotal) * 100;
+      const wTax = (item.tax / maxTotal) * 100;
+      const wAdmin = (item.admin / maxTotal) * 100;
+      const wVat = (item.vat / maxTotal) * 100;
+
+      return `
+        <div class="chart-row">
+          <div class="chart-label">
+            ${item.title}
+            <small>${item.sub}</small>
+          </div>
+          <div class="bar-track">
+            ${wBase > 0 ? `<div class="bar-seg seg-base" style="width:${wBase}%" title="Základ: ${formatKc(item.base)}">${wBase > 12 ? formatKc(item.base) : ''}</div>` : ''}
+            ${wBonuses > 0 ? `<div class="bar-seg seg-bonuses" style="width:${wBonuses}%" title="Příplatky a náhrady: ${formatKc(item.bonuses)}">${wBonuses > 9 ? formatKc(item.bonuses) : ''}</div>` : ''}
+            ${wTax > 0 ? `<div class="bar-seg seg-tax" style="width:${wTax}%" title="Odvody 34,22 %: ${formatKc(item.tax)}">${wTax > 10 ? formatKc(item.tax) : ''}</div>` : ''}
+            ${wAdmin > 0 ? `<div class="bar-seg seg-admin" style="width:${wAdmin}%" title="Režie SVJ: ${formatKc(item.admin)}"></div>` : ''}
+            ${wVat > 0 ? `<div class="bar-seg seg-vat" style="width:${wVat}%" title="21 % DPH: ${formatKc(item.vat)}">${wVat > 9 ? 'DPH ' + formatKc(item.vat) : ''}</div>` : ''}
+          </div>
+          <div class="chart-total">${formatKc(item.total)}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Initial calculation on load
+  recalculate();
+</script>
+
+</body>
+</html>
