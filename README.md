@@ -1,2 +1,4 @@
 # calculations-reception
-Kalkulace recepce pro bytový dum
+
+Kalkulace recepce pro bytový dům.
+
